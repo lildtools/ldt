@@ -1,0 +1,67 @@
+/* ***************************************************************************
+ * @import "java"
+ */
+
+def printProjectName = tasks.register("printProjectName") {
+  doLast {
+    println project.name
+  }
+}
+
+def printProjectVersion = tasks.register("printProjectVersion") {
+  doLast {
+    println project.version
+  }
+}
+
+def generateProjectMeta = tasks.register("generateProjectMeta") {
+  doLast {
+    new File("$buildDir/resources/main/project.properties").withWriter { w ->
+      Properties p = new Properties()
+      p["project.name"] = project.name.toString()
+      p["project.version"] = project.version.toString()
+      p.store w, null
+    }
+  }
+}
+
+generateProjectMeta.configure {
+    dependsOn processResources
+}
+
+def cleanDist = tasks.register("cleanDist", Delete) {
+  delete "$projectDir/dist/"
+}
+
+def makeDist = tasks.register("makeDist", Copy) {
+  dependsOn _makeDistFolder, _makeDistPlainVersion, _makeDistPlainLatest, _makeDistVersion, _makeDistLatest
+}
+
+def _makeDistFolder = tasks.register("_makeDistFolder", Task) {
+  doLast {
+    mkdir "$projectDir/dist/"
+  }
+}
+
+def _makeDistPlainVersion = tasks.register("_makeDistPlainVersion", Copy) {
+  from "$buildDir/libs/${project.name}-${project.version}-plain.jar"
+  into "$projectDir/dist/"
+  rename "${project.name}-${project.version}-plain.jar", "${project.name}-${project.version}.jar"
+}
+
+def _makeDistPlainLatest = tasks.register("_makeDistPlainLatest", Copy) {
+  from "$buildDir/libs/${project.name}-${project.version}-plain.jar"
+  into "$projectDir/dist/"
+  rename "${project.name}-${project.version}-plain.jar", "${project.name}-latest.jar"
+}
+
+def _makeDistVersion = tasks.register("_makeDistVersion", Copy) {
+  from "$buildDir/libs/${project.name}-${project.version}.jar"
+  into "$projectDir/dist/"
+}
+
+def _makeDistLatest = tasks.register("_makeDistLatest", Copy) {
+  from "$buildDir/libs/${project.name}-${project.version}.jar"
+  into "$projectDir/dist/"
+  rename "${project.name}-${project.version}.jar", "${project.name}-latest.jar"
+}

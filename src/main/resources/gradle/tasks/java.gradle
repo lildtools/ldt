@@ -1,0 +1,27 @@
+/* ***************************************************************************
+ * @import "java"
+ * @import "org.asciidoctor.jvm.convert:3.3.2"
+ */
+
+javadoc {
+  destinationDir = file("$projectDir/dist/docs/")
+}
+
+asciidoctor {
+  inputs.dir file("$buildDir/generated-snippets/")
+}
+
+test {
+  useJUnitPlatform()
+  outputs.dir file("$buildDir/generated-snippets/")
+
+  reports.html.required     = true
+  reports.junitXml.required = false
+
+  maxHeapSize = "4096m"
+  forkEvery 4
+
+  testLogging {
+    events "passed"
+  }
+}

@@ -1,0 +1,11 @@
+/* ***************************************************************************
+ * @import "org.sonarqube:4.4.1.3373"
+ */
+
+sonar {
+  properties {
+    property "sonar.projectKey", "${project.name}"
+    property "sonar.qualitygate.wait", true
+    property "sonar.sourceEncoding", "UTF-8"
+  }
+}

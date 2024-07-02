@@ -1,0 +1,29 @@
+.git-install-apk:
+  script:
+    - apk -U add --no-cache git
+
+.git-install-apt:
+  script:
+    - apt-get update
+    - apt-get install -y git
+
+.git-config:
+  script:
+    - git config --global user.name  "$GITLAB_USER_NAME"
+    - git config --global user.email "$GITLAB_USER_EMAIL"
+    - git remote set-url origin "https://oauth2:${GITLAB_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+
+.git-tag:
+  script:
+    - git tag -a "${projectVersion}" -m "'${projectVersion}' $(date +%Y-%m-%dT%H:%M:%S)"
+    - git push origin $projectVersion
+
+.git-merge:
+  script:
+    - if [ "$GIT_TARGET_BRANCH" = "" ]; then GIT_TARGET_BRANCH=develop; fi
+    - gitSourceBranchName=$CI_COMMIT_REF_NAME
+    - gitTargetBranchName=$GIT_TARGET_BRANCH
+    - if [ "$gitTargetBranchName" = "" ]; then gitTargetBranchName=develop; fi
+    - gitMergeBranch=$gitSourceBranchName-$CI_COMMIT_SHORT_SHA
+    - git checkout -b $gitMergeBranch
+    - git push -o merge_request.create -o merge_request.title="Merge 'v${projectVersion}' into '${gitTargetBranchName}'" -o merge_request.description="Automatic MR to merge '${gitSourceBranchName}' into '${gitTargetBranchName}' @ $(date +%Y-%m-%dT%H:%M:%S)" -o merge_request.target=$gitTargetBranchName -o merge_request.merge_when_pipeline_succeeds -o merge_request.remove_source_branch origin $gitMergeBranch

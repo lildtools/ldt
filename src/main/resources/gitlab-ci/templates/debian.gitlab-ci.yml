@@ -1,0 +1,117 @@
+.run_always_with_debian:
+  image: $DEBIAN_IMAGE_TAG
+  only:
+    - merge_requests
+    - develop
+    - stage
+    - master
+
+.run_always_with_debian_and_generate_dist:
+  image: $DEBIAN_IMAGE_TAG
+  artifacts:
+    name: dist
+    paths:
+      - dist/
+  cache:
+    key: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/
+  only:
+    - merge_requests
+    - develop
+    - stage
+    - master
+
+.run_on_mr_with_debian:
+  image: $DEBIAN_IMAGE_TAG
+  only:
+    - merge_requests
+
+.run_on_mr_with_debian_and_generate_dist:
+  image: $DEBIAN_IMAGE_TAG
+  artifacts:
+    name: dist
+    paths:
+      - dist/
+  cache:
+    key: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/
+  only:
+    - merge_requests
+
+.run_on_branches_with_debian:
+  image: $DEBIAN_IMAGE_TAG
+  only:
+    - develop
+    - stage
+    - master
+
+.run_on_branches_with_debian_and_generate_dist:
+  image: $DEBIAN_IMAGE_TAG
+  artifacts:
+    name: dist
+    paths:
+      - dist/
+  cache:
+    key: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/
+  only:
+    - develop
+    - stage
+    - master
+
+.run_on_develop_with_debian:
+  image: $DEBIAN_IMAGE_TAG
+  only:
+    - develop
+
+.run_on_develop_with_debian_and_generate_dist:
+  image: $DEBIAN_IMAGE_TAG
+  artifacts:
+    name: dist
+    paths:
+      - dist/
+  cache:
+    key: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/
+  only:
+    - develop
+
+.run_on_stage_with_debian:
+  image: $DEBIAN_IMAGE_TAG
+  only:
+    - stage
+
+.run_on_stage_with_debian_and_generate_dist:
+  image: $DEBIAN_IMAGE_TAG
+  artifacts:
+    name: dist
+    paths:
+      - dist/
+  cache:
+    key: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/
+  only:
+    - stage
+
+.run_on_master_with_debian:
+  image: $DEBIAN_IMAGE_TAG
+  only:
+    - master
+
+.run_on_master_with_debian_and_generate_dist:
+  image: $DEBIAN_IMAGE_TAG
+  artifacts:
+    name: dist
+    paths:
+      - dist/
+  cache:
+    key: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/
+  only:
+    - master

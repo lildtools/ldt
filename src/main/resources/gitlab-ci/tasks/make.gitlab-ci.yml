@@ -1,0 +1,44 @@
+.make-install-apk:
+  script:
+    - apk -U add --no-cache make
+
+.make-install-apt:
+  script:
+    - apt-get update
+    - apt-get install make
+
+.make-config:
+  script:
+    - projectVersion=$(cat VERSION)
+
+.make-lint:
+  script:
+    - make lint
+
+.make-sonar:
+  script:
+    - make sonar
+
+.make-build:
+  script:
+    - make build
+
+.make-test:
+  script:
+    - make test
+
+.make-docs:
+  script:
+    - make docs
+
+.make-changelog:
+  script:
+    - make changelog
+
+.make-cleanDist:
+  script:
+    - make cleanDist
+
+.make-makeDist:
+  script:
+    - make makeDist

@@ -1,0 +1,43 @@
+.npm-config:
+  script:
+    - projectVersion=$(node -p -e "require('./package.json').version")
+
+.npm-lint:
+  script:
+    - npm install
+    - npm run lint
+
+.npm-sonar:
+  script:
+    - npm install
+    - npm run sonar
+
+.npm-build:
+  script:
+    - npm install
+    - npm run build
+
+.npm-test:
+  script:
+    - npm install
+    - npm run test
+
+.npm-tsdoc:
+  script:
+    - npm install
+    - npm run tsdoc
+
+.npm-changelog:
+  script:
+    - npm install
+    - npm run changelog
+
+.npm-cleanDist:
+  script:
+    - npm install
+    - npm run dist:clean
+
+.npm-makeDist:
+  script:
+    - npm install
+    - npm run dist:make

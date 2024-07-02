@@ -1,0 +1,41 @@
+.docker-install-apk:
+  script:
+    - apk -U add --no-cache docker
+
+.docker-install-apt:
+  script:
+    - apt-get update
+    - apt-get install -y curl
+
+.docker-config:
+  script:
+    - if [ "$GET_DOCKER_URL" = "" ]; then GET_DOCKER_URL=https://get.docker.com; fi
+    - curl -sL $GET_DOCKER_URL | /bin/sh
+
+.docker-system-prune:
+  script:
+    - docker system prune --all --force
+
+.docker-container-prune:
+  script:
+    - docker container prune --force
+
+.docker-volume-prune:
+  script:
+    - docker volume prune --force
+
+.docker-image-prune:
+  script:
+    - docker image prune --all --force
+
+.docker-network-prune:
+  script:
+    - docker network prune --force
+
+.docker-clean:
+  script:
+    - docker system prune --all --force
+    - docker container prune --force
+    - docker volume prune --force
+    - docker image prune --all --force
+    - docker network prune --force

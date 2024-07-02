@@ -1,0 +1,20 @@
+/* ***************************************************************************
+ * @import "checkstyle"
+ */
+
+checkstyle {
+  configDirectory = file("$projectDir/$resourcesDir/checkstyle/")
+  configFile      = file("$projectDir/$resourcesDir/checkstyle/checkstyle.xml")
+  toolVersion     = "$checkstyleVersion"
+}
+
+tasks.withType(Checkstyle) {
+  reports {
+    sarif.required       = false
+    sarif.outputLocation = file("$buildDir/generated/checkstyle/index.sarif")
+    xml.required         = false
+    xml.outputLocation   = file("$buildDir/generated/checkstyle/index.xml")
+    html.required        = true
+    html.outputLocation  = file("$buildDir/generated/checkstyle/index.html")
+  }
+}

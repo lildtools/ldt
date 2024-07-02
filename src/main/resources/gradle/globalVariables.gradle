@@ -1,0 +1,8 @@
+ext {
+    repositoryServerHost = System.getenv("CI_SERVER_HOST")
+    repositoryProjectPath = System.getenv("CI_PROJECT_PATH")
+
+    resourcesDir = "lib/esnc-commons/dist/res"
+
+    checkstyleVersion = "10.16.0"
+}

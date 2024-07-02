@@ -1,0 +1,46 @@
+/* ***************************************************************************
+ * @import "se.bjurr.gitchangelog.git-changelog-gradle-plugin:2.1.2"
+ */
+
+def changelog = tasks.register("changelog") {
+  doLast { }
+}
+
+def changelogTemplate = ""
+  .concat("# Changelog\n")
+  .concat("\n")
+  .concat("All notable changes to this project will be documented in this file. See [conventional-commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.\n")
+  .concat("{{#tags}}\n")
+  .concat("\n")
+  .concat("## [{{name}}](https://${repositoryServerHost}/${repositoryProjectPath}/-/tags/{{name}}) ({{tagDate .}})\n")
+  .concat("{{#commits}}\n")
+  .concat("\n")
+  .concat("- {{{message}}} ([{{hash}}](https://${repositoryServerHost}/${repositoryProjectPath}/-/commit/{{hashFull}}))\n")
+  .concat("{{/commits}}\n")
+  .concat("{{/tags}}\n");
+
+def changelogIgnoredCommits = ""
+  .concat(".*(")
+  .concat("(CHANGELOG:)|(changelog:)|")
+  .concat("(CHORE:)|(chore:)|")
+  .concat("(DEBUG:)|(debug:)|")
+  .concat("(FIC:)|(fic:)|")
+  .concat("(IMPR:)|(impr:)|")
+  .concat("(Merge )|")
+  .concat("(REFACT:)|(refact:)|")
+  .concat("(REL:)|(rel:)|")
+  .concat("(REVERT:)|(revert:)|")
+  .concat("(WIP -)|(wip -)|(WIP:)|(wip:)|(- )")
+  .concat(").*");
+
+
+gitChangelog {
+  fromRepo                      = file("$projectDir/.");
+  file                          = file("$projectDir/dist/CHANGELOG.md");
+  templateContent               = "$changelogTemplate";
+  ignoreCommitsIfMessageMatches = "$changelogIgnoredCommits";
+}
+
+changelog.configure {
+  dependsOn gitChangelog
+}
