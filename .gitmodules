@@ -4,3 +4,6 @@
 [submodule "lib/ldt-compiler"]
 	path = lib/ldt-compiler
 	url = git@github.com:lildtools/ldt-compiler.git
+[submodule "lib/ldt-utils"]
+	path = lib/ldt-utils
+	url = git@github.com:lildtools/ldt-utils.git
