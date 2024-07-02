@@ -16,7 +16,7 @@ default: clean build
 
 ###########################################################################
 APP_NAME     := ldt
-APP_VERSION  := $(shell cat ./VERSION)
+APP_VERSION  := 1.0.0-SNAPSHOT
 APP_CODENAME := LDT
 APP_CMD      := ldt
 
