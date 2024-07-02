@@ -2,7 +2,7 @@
 
 main() {
     cmd="$1 --usage"
-    if [ "$LDT_TEST_E2E_DEBUG_MODE" = "true" ]; then $cmd; fi
+    if [ "$LDT_TEST_INTEGRATION_DEBUG_MODE" = "true" ]; then $cmd; fi
 
     result=$($cmd | grep USAGE:)
 

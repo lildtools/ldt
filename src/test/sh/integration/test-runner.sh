@@ -9,7 +9,7 @@ main() {
 
     cmd=$(realpath $(dirname "${BASH_SOURCE[0]}")/../../../../dist/$DISTNAME-$VERSION.sh)
 
-    if [ "$LDT_TEST_E2E_DEBUG_MODE" = "true" ]; then
+    if [ "$LDT_TEST_INTEGRATION_DEBUG_MODE" = "true" ]; then
         printf "$testCaseShort...\n"
         printf "  e2e created: $(date +"%Y-%m-%d %H:%M:%S.%3N")\n"
         printf "  e2e file: $testCaseFile\n"
@@ -19,7 +19,7 @@ main() {
     fi
     /bin/bash $testCaseFile "$cmd"
     testResult=$?
-    if [ "$LDT_TEST_E2E_DEBUG_MODE" = "true" ]; then
+    if [ "$LDT_TEST_INTEGRATION_DEBUG_MODE" = "true" ]; then
         printf "  -----\n"
         printf "  -- done: $testCaseShort\n"
         printf "  e2e finished: $(date +"%Y-%m-%d %H:%M:%S.%3N")\n"
