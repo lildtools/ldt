@@ -4,9 +4,6 @@
 [submodule "ldt-docker"]
 	path = lib/ldt-docker
 	url = git@github.com:lildworks/ldt-docker.git
-[submodule "ldt-docker-compose"]
-	path = lib/ldt-docker-compose
-	url = git@github.com:lildworks/ldt-docker-compose.git
 [submodule "ldt-logger"]
 	path = lib/ldt-logger
 	url = git@github.com:lildworks/ldt-logger.git

@@ -1,0 +1,15 @@
+networks:
+  portainer:
+    name: portainer-net
+services:
+  portainer:
+    image: portainer/portainer-ce:{{ PORTAINER__IMAGE_TAG }}
+    container_name: portainer
+    restart: unless-stopped
+    volumes:
+      - /srv/portainer/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - portainer-net
+    ports:
+      - 127.0.0.1:9000:9000
