@@ -1,12 +1,16 @@
-[submodule "ldt-compiler"]
-	path = lib/ldt-compiler
-	url = git@github.com:lildtools/ldt-compiler.git
-[submodule "ldt-docker"]
-	path = lib/ldt-docker
-	url = git@github.com:lildtools/ldt-docker.git
-[submodule "ldt-logger"]
-	path = lib/ldt-logger
-	url = git@github.com:lildtools/ldt-logger.git
-[submodule "ldt-utils"]
-	path = lib/ldt-utils
-	url = git@github.com:lildtools/ldt-utils.git
+# [submodule "ldt-compiler"]
+# 	path = lib/ldt-compiler
+# 	url = git@github.com:lildtools/ldt-compiler.git
+# [submodule "ldt-docker"]
+# 	path = lib/ldt-docker
+# 	url = git@github.com:lildtools/ldt-docker.git
+# [submodule "ldt-logger"]
+# 	path = lib/ldt-logger
+# 	url = git@github.com:lildtools/ldt-logger.git
+# [submodule "ldt-utils"]
+# 	path = lib/ldt-utils
+# 	url = git@github.com:lildtools/ldt-utils.git
+
+
+# git submodule add --name ldt-compiler -- git@github.com:lildworks/ldt-compiler.git lib/ldt-compiler/
+
