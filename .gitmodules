@@ -4,9 +4,15 @@
 [submodule "ldt-docker"]
 	path = lib/ldt-docker
 	url = git@github.com:lildworks/ldt-docker.git
+[submodule "ldt-gui"]
+	path = projects/ldt-gui
+	url = git@github.com:lildworks/ldt-gui.git
 [submodule "ldt-logger"]
 	path = lib/ldt-logger
 	url = git@github.com:lildworks/ldt-logger.git
+[submodule "ldt-unix"]
+	path = lib/ldt-unix
+	url = git@github.com:lildworks/ldt-unix.git
 [submodule "ldt-utils"]
 	path = lib/ldt-utils
 	url = git@github.com:lildworks/ldt-utils.git
@@ -16,6 +22,3 @@
 [submodule "ldt-www"]
 	path = projects/ldt-www
 	url = git@github.com:lildworks/ldt-www.git
-[submodule "ldt-unix"]
-	path = lib/ldt-unix
-	url = git@github.com:lildworks/ldt-unix.git
