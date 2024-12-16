@@ -1,0 +1,19 @@
+###########################################################################
+.SILENT: default
+default: backup
+
+###########################################################################
+.SILENT: backup
+backupFile:=bin/makeBackup-1.0.0
+backup:
+	((chmod 744 "./${backupFile}") ; \
+	 (/bin/sh   "./${backupFile}") ; \
+	 (chmod 644 "./${backupFile}"))
+
+###########################################################################
+.SILENT: post-install
+postInstallFile:=bin/vbInstallUbuntu-20.04.6
+post-install:
+	((chmod 744 "./${postInstallFile}") ; \
+	 (/bin/bash "./${postInstallFile}") ; \
+	 (chmod 644 "./${postInstallFile}"))

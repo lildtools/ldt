@@ -1,0 +1,944 @@
+#!/bin/bash
+#################################################################################
+## USAGE:
+##   ldtw <context> [sandbox] [task] <args>
+##
+## context(s):
+##   docker                        -  run tasks in docker context
+##   code-server                   -  run tasks in code-server context
+##
+## sandbox(s):
+##   debian                        -  run tasks in docker context with configured Debian sandbox environment
+##   ubuntu                        -  run tasks in docker context with configured Ubuntu sandbox environment
+##   gradle                        -  run tasks in docker context with configured Gradle sandbox environment
+##   make                          -  run tasks in docker context with configured GNU-Make sandbox environment
+##   npm                           -  run tasks in docker context with configured NodeJS sandbox environment
+##   php                           -  run tasks in docker context with configured PHP sandbox environment
+##   mysql                         -  run services in docker context with configured MySQL Database Server sandbox environment
+##   phpmyadmin                    -  run services in docker context with configured phpMyAdmin sandbox environment
+##   postgres                      -  run services in docker context with configured PostgreSQL Database Server sandbox environment
+##   pgadmin                       -  run services in docker context with configured pgAdmin4 sandbox environment
+##   rabbitmq                      -  run services in docker context with configured RabbitMQ sandbox environment
+##   htmlboot                      -  run dev-server in docker context with configured HTML/webpack sandbox environment
+##   phpboot                       -  run dev-server in docker context with configured PHP/php-fpm sandbox environment
+##   anguboot                      -  run dev-server in docker context with configured Angular sandbox environment
+##   springboot                    -  run dev-server in docker context with configured SpringBoot sandbox environment
+##   gnuboot                       -  run dev-server in docker context with configured GNU-Make sandbox environment
+##   os                            -  run scripts in code-server context with configured Code-Server OS sandbox environment
+##   git                           -  run scripts in code-server context with configured Code-Server Git sandbox environment
+##   git-flow                      -  run scripts in code-server context with configured Code-Server Git-Flow sandbox environment
+##   docker-engine                 -  run scripts in code-server context with configured Code-Server Docker-Engine sandbox environment
+##   docker-compose                -  run scripts in code-server context with configured Code-Server Docker-Compose sandbox environment
+##   jdk                           -  run scripts in code-server context with configured Code-Server Java Development Kit sandbox environment
+##   nodejs                        -  run scripts in code-server context with configured Code-Server NodeJS sandbox environment
+##
+## task(s):
+##   start                         -  start dev-server runner in the pre-configured sandbox environment with the pre-configured context
+##   inspect                       -  inspect dev-server in the pre-configured sandbox environment with the pre-configured context
+##   upgrade                       -  upgrade code-server instance in the pre-configured sandbox environment with the pre-configured context
+##   install                       -  install code-server instance in the pre-configured sandbox environment with the pre-configured context
+##   <custom>                      -  run any custom dev-server command in the pre-configured sandbox environment with the pre-configured context
+##
+## arg(s):
+##   --debug                       -  enable debug mode
+##   --dockerDaemon | -d           -  enable docker run daemon
+##   --dockerImageTag | -i         -  docker image tag (imageName:tagVersion)
+##   --dockerMount | -m            -  docker container volume (any available path on host)
+##   --dockerName | -n             -  docker container name (any custom container name)
+##   --dockerPort | -p             -  docker port publish to localhost (any available port number)
+##   --dockerTargetProfile | -t    -  docker target profile for task (local|dev|stage|prod)
+##
+## environment(s):
+##   LDT_HOME                      -  ~/.ldt
+##   LDT__DOCKER_DOWNLOAD_URL      -  https://get.docker.com
+##   LDT__GIT_USER                 -  me
+##   LDT__GIT_EMAIL                -  me@git-scm.com
+##   LDT__JAVA_VERSION             -  openjdk-default-jdk
+##   LDT__NODE_DOWNLOAD_URL        -  https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+##   LDT__NODE_VERSION             -  node_lts
+##   MYSQL_DB                      -  mysqldb_local
+##   MYSQL_USER                    -  mysql
+##   MYSQL_PASS                    -  my5qLLw
+##   MYSQL_NET                     -  mysql-net
+##   PHPMYADMIN_HOST               -  mysql
+##   POSTGRES_DB                   -  psqldb_local
+##   POSTGRES_USER                 -  postgres
+##   POSTGRES_PASS                 -  p0stgresLw
+##   POSTGRES_NET                  -  postgres-net
+##   PGADMIN_USER                  -  root@pgadmin.org
+##   PGADMIN_PASS                  -  pg4dM1nLw
+##   RABBITMQ_HOST                 -  rabbitmq
+##   RABBITMQ_USER                 -  rabbitmq
+##   RABBITMQ_PASS                 -  r4bbitLmq
+##
+
+main() {
+    parse $*
+    load "${args[@]}"
+    validate
+    run
+    if [ $? -ne 0 ]; then exit 1; fi
+    exit 0
+}
+
+#################################################################################
+## Parse input arguments
+
+parse() {
+    args=()
+
+    for arg in "$@"; do
+        case "$arg" in
+        --debug)
+            DEBUG=true
+            ;;
+        --dockerDaemon | -d)
+            DOCKER_DAEMON=true
+            ;;
+        --dockerImageTag | -i)
+            DOCKER_IMAGE_FLAG=true
+            ;;
+        --dockerMount | -m)
+            DOCKER_MOUNT_FLAG=true
+            ;;
+        --dockerName | -n)
+            DOCKER_NAME_FLAG=true
+            ;;
+        --dockerPort | -p)
+            DOCKER_PORT_FLAG=true
+            ;;
+        --dockerTargetProfile | -t)
+            DOCKER_PROFILE_FLAG=true
+            ;;
+        --quick)
+            QUICK_RUN=true
+            ;;
+        *)
+            if [ "$DOCKER_IMAGE_FLAG" = "true" ]; then
+                DOCKER_IMAGE_FLAG=false
+                DOCKER_IMAGE=$arg
+                continue
+            fi
+            if [ "$DOCKER_MOUNT_FLAG" = "true" ]; then
+                DOCKER_MOUNT_FLAG=false
+                DOCKER_MOUNT=$arg
+                continue
+            fi
+            if [ "$DOCKER_NAME_FLAG" = "true" ]; then
+                DOCKER_NAME_FLAG=false
+                DOCKER_NAME=$arg
+                continue
+            fi
+            if [ "$DOCKER_PORT_FLAG" = "true" ]; then
+                DOCKER_PORT_FLAG=false
+                DOCKER_PORT=$arg
+                continue
+            fi
+            if [ "$DOCKER_PROFILE_FLAG" = "true" ]; then
+                DOCKER_PROFILE_FLAG=false
+                DOCKER_PROFILE=$arg
+                continue
+            fi
+            args+=($arg)
+            ;;
+        esac
+    done
+}
+
+#################################################################################
+## Prints a formatted message to stdout
+
+log() {
+    logLevel=$1
+    logMessage=$2
+
+    now=$(date +"%Y-%m-%d %H:%M:%S.%3N")
+
+    if [ $logLevel = "DEBUG" ]; then
+        if [ "$DEBUG" = "true" ]; then
+            printf "$now [$logLevel] %s\n" "$logMessage"
+        fi
+    else
+        printf "$now [$logLevel] %s\n" "$logMessage"
+    fi
+}
+
+#################################################################################
+## Load script context and environment
+
+load() {
+    log "DEBUG" "loading..."
+
+    ctx=$1
+    shift
+    dockerContainerAppPath="/usr/src/app"
+    dockerContainerCommand=""
+    dockerContainerCommandProfile="$DOCKER_PROFILE"
+    dockerContainerEnv=""
+    dockerContainerImage="$DOCKER_IMAGE"
+    dockerContainerMount="$DOCKER_MOUNT"
+    dockerContainerName="$DOCKER_NAME"
+    dockerContainerNetwork=""
+    dockerContainerPort="$DOCKER_PORT"
+    dockerContainerPublish=""
+    dockerContainerUser=""
+    dockerContainerVolumes=""
+    dockerContainerWorkdir=""
+    unixCommand=""
+    me=$(whoami)
+    sandbox=$1
+    shift
+    task=$*
+    workindDir=$PWD
+    statusCode=0
+
+    if [ "$LDT_HOME" = "" ]; then LDT_HOME=~/.ldt; fi
+    if [ "$LDT__DOCKER_DOWNLOAD_URL" = "" ]; then LDT__DOCKER_DOWNLOAD_URL=https://get.docker.com; fi
+    if [ "$LDT__GIT_USER" = "" ]; then LDT__GIT_USER=$me; fi
+    if [ "$LDT__GIT_EMAIL" = "" ]; then LDT__GIT_EMAIL=$me@git-scm.com; fi
+    if [ "$LDT__JAVA_VERSION" = "" ]; then LDT__JAVA_VERSION=openjdk-default-jdk; fi
+    if [ "$LDT__NODE_DOWNLOAD_URL" = "" ]; then LDT__NODE_DOWNLOAD_URL=https://fnm.vercel.app/install; fi
+    if [ "$LDT__NODE_VERSION" = "" ]; then LDT__NODE_VERSION=node_lts; fi
+
+    if [ "$MYSQL_DB" = "" ]; then MYSQL_DB=mysqldb_local; fi
+    if [ "$MYSQL_USER" = "" ]; then MYSQL_USER=mysql; fi
+    if [ "$MYSQL_PASS" = "" ]; then MYSQL_PASS=my5qLLw; fi
+    if [ "$MYSQL_NET" = "" ]; then MYSQL_NET=mysql-net; fi
+
+    if [ "$PHPMYADMIN_HOST" = "" ]; then PHPMYADMIN_HOST=mysql; fi
+
+    if [ "$POSTGRES_DB" = "" ]; then POSTGRES_DB=psqldb_local; fi
+    if [ "$POSTGRES_USER" = "" ]; then POSTGRES_USER=postgres; fi
+    if [ "$POSTGRES_PASS" = "" ]; then POSTGRES_PASS=p0stgresLw; fi
+    if [ "$POSTGRES_NET" = "" ]; then POSTGRES_NET=postgres-net; fi
+
+    if [ "$PGADMIN_USER" = "" ]; then PGADMIN_USER=root@pgadmin.org; fi
+    if [ "$PGADMIN_PASS" = "" ]; then PGADMIN_PASS=pg4dM1nLw; fi
+
+    if [ "$RABBITMQ_HOST" = "" ]; then RABBITMQ_HOST=rabbitmq; fi
+    if [ "$RABBITMQ_USER" = "" ]; then RABBITMQ_USER=rabbitmq; fi
+    if [ "$RABBITMQ_PASS" = "" ]; then RABBITMQ_PASS=r4bbitLmq; fi
+
+    if [ -f $workindDir/.env ]; then
+        export $(cat $workindDir/.env | xargs)
+    fi
+    log "DEBUG" "-- me=$me"
+
+    log "DEBUG" "-- runner:"
+    log "DEBUG" "-- --- ctx=$ctx"
+    log "DEBUG" "-- --- sandbox=$sandbox"
+    log "DEBUG" "-- --- task=$task"
+    log "DEBUG" "-- --- workindDir=$workindDir"
+    log "DEBUG" "-- --- statusCode=$statusCode"
+
+    log "DEBUG" "-- docker:"
+    log "DEBUG" "-- --- dockerContainerAppPath=$dockerContainerAppPath"
+    log "DEBUG" "-- --- dockerContainerCommand=$dockerContainerCommand"
+    log "DEBUG" "-- --- dockerContainerCommandProfile=$dockerContainerCommandProfile"
+    log "DEBUG" "-- --- dockerContainerEnv=$dockerContainerEnv"
+    log "DEBUG" "-- --- dockerContainerImage=$dockerContainerImage"
+    log "DEBUG" "-- --- dockerContainerMount=$dockerContainerMount"
+    log "DEBUG" "-- --- dockerContainerName=$dockerContainerName"
+    log "DEBUG" "-- --- dockerContainerNetwork=$dockerContainerNetwork"
+    log "DEBUG" "-- --- dockerContainerPort=$dockerContainerPort"
+    log "DEBUG" "-- --- dockerContainerPublish=$dockerContainerPublish"
+    log "DEBUG" "-- --- dockerContainerUser=$dockerContainerUser"
+    log "DEBUG" "-- --- dockerContainerVolumes=$dockerContainerVolumes"
+    log "DEBUG" "-- --- dockerContainerWorkdir=$dockerContainerWorkdir"
+
+    log "DEBUG" "-- unix:"
+    log "DEBUG" "-- --- unixCommand=$unixCommand"
+
+    log "DEBUG" "-- environment:"
+    log "DEBUG" "-- --- LDT_HOME=$LDT_HOME"
+    log "DEBUG" "-- --- LDT__DOCKER_DOWNLOAD_URL=$LDT__DOCKER_DOWNLOAD_URL"
+    log "DEBUG" "-- --- LDT__GIT_USER=$LDT__GIT_USER"
+    log "DEBUG" "-- --- LDT__GIT_EMAIL=$LDT__GIT_EMAIL"
+    log "DEBUG" "-- --- LDT__JAVA_VERSION=$LDT__JAVA_VERSION"
+    log "DEBUG" "-- --- LDT__NODE_DOWNLOAD_URL=$LDT__NODE_DOWNLOAD_URL"
+    log "DEBUG" "-- --- LDT__NODE_VERSION=$LDT__NODE_VERSION"
+    log "DEBUG" "-- --- MYSQL_DB=$MYSQL_DB"
+    log "DEBUG" "-- --- MYSQL_USER=$MYSQL_USER"
+    log "DEBUG" "-- --- MYSQL_PASS=$MYSQL_PASS"
+    log "DEBUG" "-- --- MYSQL_NET=$MYSQL_NET"
+    log "DEBUG" "-- --- PHPMYADMIN_HOST=$PHPMYADMIN_HOST"
+    log "DEBUG" "-- --- POSTGRES_DB=$POSTGRES_DB"
+    log "DEBUG" "-- --- POSTGRES_USER=$POSTGRES_USER"
+    log "DEBUG" "-- --- POSTGRES_PASS=$POSTGRES_PASS"
+    log "DEBUG" "-- --- POSTGRES_NET=$POSTGRES_NET"
+    log "DEBUG" "-- --- PGADMIN_USER=$PGADMIN_USER"
+    log "DEBUG" "-- --- PGADMIN_PASS=$PGADMIN_PASS"
+    log "DEBUG" "-- --- RABBITMQ_HOST=$RABBITMQ_HOST"
+    log "DEBUG" "-- --- RABBITMQ_USER=$RABBITMQ_USER"
+    log "DEBUG" "-- --- RABBITMQ_PASS=$RABBITMQ_PASS"
+}
+
+#################################################################################
+## Validate loaded context and environment
+
+validate() {
+    log "DEBUG" "validating..."
+
+    if [ "$ctx" = "" ]; then
+        log "ERROR" "context is required!"
+        exit 400
+    fi
+    if [ ! "$ctx" = "docker" ] &&
+        [ ! "$ctx" = "code-server" ]; then
+        log "ERROR" "context is invalid!"
+        exit 400
+    fi
+    if [ "$sandbox" = "" ]; then
+        log "ERROR" "sandbox is required!"
+        exit 400
+    fi
+    if [ ! "$sandbox" = "debian" ] &&
+        [ ! "$sandbox" = "ubuntu" ] &&
+        [ ! "$sandbox" = "gradle" ] &&
+        [ ! "$sandbox" = "make" ] &&
+        [ ! "$sandbox" = "npm" ] &&
+        [ ! "$sandbox" = "php" ] &&
+        [ ! "$sandbox" = "mysql" ] &&
+        [ ! "$sandbox" = "phpmyadmin" ] &&
+        [ ! "$sandbox" = "postgres" ] &&
+        [ ! "$sandbox" = "pgadmin" ] &&
+        [ ! "$sandbox" = "rabbitmq" ] &&
+        [ ! "$sandbox" = "htmlboot" ] &&
+        [ ! "$sandbox" = "phpboot" ] &&
+        [ ! "$sandbox" = "anguboot" ] &&
+        [ ! "$sandbox" = "springboot" ] &&
+        [ ! "$sandbox" = "gnuboot" ] &&
+        [ ! "$sandbox" = "os" ] &&
+        [ ! "$sandbox" = "git" ] &&
+        [ ! "$sandbox" = "git-flow" ] &&
+        [ ! "$sandbox" = "docker-engine" ] &&
+        [ ! "$sandbox" = "docker-compose" ] &&
+        [ ! "$sandbox" = "jdk" ] &&
+        [ ! "$sandbox" = "nodejs" ]; then
+        log "ERROR" "sandbox is invalid!"
+        exit 400
+    fi
+    if [ "$workindDir" = "" ]; then
+        log "ERROR" "working directory is required!"
+        exit 400
+    fi
+    if [ ! -d "$workindDir" ]; then
+        log "ERROR" "working directory is invalid!"
+        exit 400
+    fi
+}
+
+#################################################################################
+## Run task in docker context with sandbox environment
+
+run() {
+    log "DEBUG" "preparing..."
+
+    if [ "$ctx" = "docker" ]; then
+        if [ "$sandbox" = "debian" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=debian:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=debian
+            fi
+            log "DEBUG" "configure... 'debian' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            doDockerRun "$task"
+            return $statusCode
+        fi
+        if [ "$sandbox" = "ubuntu" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=ubuntu:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=ubuntu
+            fi
+            log "DEBUG" "configure... 'ubuntu' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            doDockerRun "$task"
+            return $statusCode
+        fi
+        if [ "$sandbox" = "gradle" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=gradle:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=gradle
+            fi
+            log "DEBUG" "configure... 'gradle' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            doDockerRun "sh -c \"gradle $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "make" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=ubuntu:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=make
+            fi
+            log "DEBUG" "configure... 'make' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            doDockerRun "bash -c \"make $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "npm" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=node:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=npm
+            fi
+            log "DEBUG" "configure... 'npm' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            doDockerRun "sh -c \"npm $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "php" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=php:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=php
+            fi
+            log "DEBUG" "configure... 'php' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            doDockerRun "sh -c \"php $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "mysql" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=mysql:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=mysql
+            fi
+            log "DEBUG" "configure... 'mysql' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerNetwork="--network $MYSQL_NET"
+            dockerContainerEnv="$dockerContainerEnv -e MYSQL_ROOT_PASSWORD=$MYSQL_PASS"
+            dockerContainerEnv="$dockerContainerEnv -e MYSQL_DATABASE=$MYSQL_DB"
+            dockerContainerVolumes="-v /srv/$(echo $dockerContainerImage | tr : -):/var/lib/mysql"
+            dockerContainerPublish="-p 3306:3306 -p 33060:33060"
+            dockerContainerCommand="mysqld --default-authentication-plugin=mysql_native_password"
+
+            doDockerNetworkCheck $MYSQL_NET
+
+            if [ "$task" = "start" ]; then
+                doDockerRun
+                return $statusCode
+            fi
+            return 404
+        fi
+        if [ "$sandbox" = "phpmyadmin" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=phpmyadmin:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=phpmyadmin
+            fi
+            log "DEBUG" "configure... 'phpmyadmin' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerNetwork="--network $MYSQL_NET"
+            dockerContainerEnv="$dockerContainerEnv -e MYSQL_ROOT_PASSWORD=$MYSQL_PASS"
+            dockerContainerEnv="$dockerContainerEnv -e PMA_HOST=$PHPMYADMIN_HOST"
+            dockerContainerEnv="$dockerContainerEnv -e UPLOAD_LIMIT=10G"
+            dockerContainerVolumes="-v /srv/$(echo $dockerContainerImage | tr : -):/var/lib/phpmyadmin"
+            dockerContainerPublish="-p 8080:80"
+
+            doDockerNetworkCheck $MYSQL_NET
+
+            if [ "$task" = "start" ]; then
+                doDockerRun
+                return $statusCode
+            fi
+            return 404
+        fi
+        if [ "$sandbox" = "postgres" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=postgres:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=postgres
+            fi
+            log "DEBUG" "configure... 'postgres' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerNetwork="--network $POSTGRES_NET"
+            dockerContainerEnv="$dockerContainerEnv -e POSTGRES_USER=$POSTGRES_USER"
+            dockerContainerEnv="$dockerContainerEnv -e POSTGRES_PASSWORD=$POSTGRES_PASS"
+            dockerContainerEnv="$dockerContainerEnv -e POSTGRES_DB=$POSTGRES_DB"
+            dockerContainerVolumes="-v /srv/$(echo $dockerContainerImage | tr : -):/var/lib/postgresql/data"
+            dockerContainerPublish="-p 5432:5432"
+
+            doDockerNetworkCheck $POSTGRES_NET
+
+            if [ "$task" = "start" ]; then
+                doDockerRun
+                return $statusCode
+            fi
+            return 404
+        fi
+        if [ "$sandbox" = "pgadmin" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=dpage/pgadmin4:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=pgadmin
+            fi
+            log "DEBUG" "configure... 'pgadmin' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u root"
+            dockerContainerNetwork="--network $POSTGRES_NET"
+            dockerContainerEnv="$dockerContainerEnv -e PGADMIN_DEFAULT_EMAIL=$PGADMIN_USER"
+            dockerContainerEnv="$dockerContainerEnv -e PGADMIN_DEFAULT_PASSWORD=$PGADMIN_PASS"
+            dockerContainerEnv="$dockerContainerEnv -e POSTGRES_DB=$POSTGRES_DB"
+            dockerContainerVolumes="-v /srv/$(echo $dockerContainerImage | tr : /):/var/lib/pgadmin"
+            dockerContainerPublish="-p 5050:80"
+
+            doDockerNetworkCheck $POSTGRES_NET
+
+            if [ "$task" = "start" ]; then
+                doDockerRun
+                return $statusCode
+            fi
+            return 404
+        fi
+        if [ "$sandbox" = "rabbitmq" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=rabbitmq:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=rabbitmq
+            fi
+            log "DEBUG" "configure... 'rabbitmq' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerNetwork="--network $RABBITMQ_NET"
+            dockerContainerEnv="$dockerContainerEnv -e RABBITMQ_DEFAULT_VHOST=$RABBITMQ_HOST"
+            dockerContainerEnv="$dockerContainerEnv -e RABBITMQ_DEFAULT_USER=$RABBITMQ_USER"
+            dockerContainerEnv="$dockerContainerEnv -e RABBITMQ_DEFAULT_PASS=$RABBITMQ_PASS"
+            dockerContainerVolumes="-v /srv/$(echo $dockerContainerImage | tr : -):/var/lib/rabbitmq"
+            dockerContainerPublish="-p 5672:5672 -p 15672:15672"
+
+            if [ "$task" = "start" ]; then
+                doDockerRun
+                return $statusCode
+            fi
+            return 404
+        fi
+        if [ "$sandbox" = "htmlboot" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=node:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=htmlboot
+            fi
+            if [ "$dockerContainerCommandProfile" = "" ]; then
+                dockerContainerCommandProfile=local
+            fi
+            if [ "$dockerContainerPort" = "" ]; then
+                dockerContainerPort=3000
+            fi
+            log "DEBUG" "configure... 'htmlboot' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            if [ "$task" = "start" ]; then
+                doDockerRun "sh -c \"npm run start-$dockerContainerCommandProfile\""
+                return $statusCode
+            fi
+            if [ "$task" = "inspect" ]; then
+                doDockerExec "sh"
+                return $statusCode
+            fi
+            doDockerRun "sh -c \"$task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "phpboot" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=php-fpm:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=phpboot
+            fi
+            if [ "$dockerContainerCommandProfile" = "" ]; then
+                dockerContainerCommandProfile=root
+            fi
+            if [ "$dockerContainerPort" = "" ]; then
+                dockerContainerPort=3300
+            fi
+            log "DEBUG" "configure... 'phpboot' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $dockerContainerCommandProfile"
+            dockerContainerVolumes="$dockerContainerVolumes -v $workindDir/dist/www:$dockerContainerAppPath"
+            dockerContainerVolumes="$dockerContainerVolumes -v $workindDir/dist/conf/nginx.conf:/etc/nginx/nginx.conf"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            if [ "$task" = "start" ]; then
+                customTask="chmod -R 755 $dockerContainerAppPath"
+                customTask="$customTask && service php8.2-fpm start"
+                customTask="$customTask && service nginx start"
+                customTask="$customTask && tail -f /var/log/nginx/access.log"
+                doDockerRun "sh -c \"$customTask\""
+                return $statusCode
+            fi
+            if [ "$task" = "inspect" ]; then
+                doDockerExec "sh"
+                return $statusCode
+            fi
+            doDockerRun "sh -c \"php $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "anguboot" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=node:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=anguboot
+            fi
+            if [ "$dockerContainerCommandProfile" = "" ]; then
+                dockerContainerCommandProfile=local
+            fi
+            if [ "$dockerContainerPort" = "" ]; then
+                dockerContainerPort=4200
+            fi
+            log "DEBUG" "configure... 'anguboot' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            if [ "$task" = "start" ]; then
+                doDockerRun "sh -c \"npm run start-$dockerContainerCommandProfile\""
+                return $statusCode
+            fi
+            if [ "$task" = "inspect" ]; then
+                doDockerExec "sh"
+                return $statusCode
+            fi
+            doDockerRun "sh -c \"npm $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "springboot" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=gradle:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=springboot
+            fi
+            if [ "$dockerContainerCommandProfile" = "" ]; then
+                dockerContainerCommandProfile=local
+            fi
+            if [ "$dockerContainerPort" = "" ]; then
+                dockerContainerPort=9080
+            fi
+            log "DEBUG" "configure... 'springboot' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            if [ "$task" = "start" ]; then
+                doDockerRun "sh -c \"gradle bootRun --spring.profiles.active=$dockerContainerCommandProfile\""
+                return $statusCode
+            fi
+            if [ "$task" = "inspect" ]; then
+                doDockerExec "sh"
+                return $statusCode
+            fi
+            doDockerRun "sh -c \"gradle $task\""
+            return $statusCode
+        fi
+        if [ "$sandbox" = "gnuboot" ]; then
+            if [ "$dockerContainerImage" = "" ]; then
+                dockerContainerImage=ubuntu:latest
+            fi
+            if [ "$dockerContainerName" = "" ]; then
+                dockerContainerName=gnuboot
+            fi
+            log "DEBUG" "configure... 'gnuboot' sandbox"
+            dockerContainerName="--name $dockerContainerName"
+            dockerContainerUser="-u $(id -u $me):$(id -g $me)"
+            dockerContainerVolumes="-v $workindDir:$dockerContainerAppPath"
+            dockerContainerWorkdir="-w $dockerContainerAppPath"
+            if [ ! "$dockerContainerMount" = "" ]; then
+                dockerContainerVolumes="$dockerContainerVolumes -v $dockerContainerMount"
+            fi
+            if [ ! "$dockerContainerPort" = "" ]; then
+                dockerContainerPublish="-p $dockerContainerPort:$dockerContainerPort"
+            fi
+
+            if [ "$task" = "start" ]; then
+                doDockerRun "bash -c \"make watch --codeChanges --with inotify-tools\""
+                return $statusCode
+            fi
+            if [ "$task" = "inspect" ]; then
+                doDockerExec "bash"
+                return $statusCode
+            fi
+            doDockerRun "bash -c \"make $task\""
+            return $statusCode
+        fi
+    fi
+    if [ "$ctx" = "code-server" ]; then
+        if [ "$sandbox" = "os" ]; then
+            if [ "$task" = "upgrade" ]; then
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt upgrade -y"
+                doUnixRun "sudo apt install -y build-essential net-tools curl htop mc nano"
+                if [ -f "$LDT_HOME/res/code-server/keybindings.json" ]; then
+                    doUnixRun "cp -vf ${LDT_HOME}/res/code-server/keybindings.json /config/data/User/keybindings.json"
+                fi
+                if [ -f "$LDT_HOME/res/code-server/settings.json" ]; then
+                    doUnixRun "cp -vf ${LDT_HOME}/res/code-server/settings.json /config/data/User/settings.json"
+                fi
+                doUnixRun "sudo chown -Rv $me:$me /config/"
+                doUnixRun "sudo chown -Rv $me:$me /works/"
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+        if [ "$sandbox" = "git" ]; then
+            if [ "$task" = "install" ]; then
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt install -y git"
+                if [ ! -f "~/.gitconfig" ]; then
+                    doUnixRun "git config --global user.name $LDT__GIT_USER"
+                    doUnixRun "git config --global user.email $LDT__GIT_EMAIL"
+                    doUnixRun "git config --global init.defaultBranch master"
+                fi
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+        if [ "$sandbox" = "git-flow" ]; then
+            if [ "$task" = "install" ]; then
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt install -y git git-flow"
+                if [ ! -f "~/.gitconfig" ]; then
+                    doUnixRun "git config --global user.name $LDT__GIT_USER"
+                    doUnixRun "git config --global user.email $LDT__GIT_EMAIL"
+                    doUnixRun "git config --global init.defaultBranch master"
+                fi
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+        if [ "$sandbox" = "docker-engine" ]; then
+            if [ "$task" = "install" ]; then
+                doUnixRun "curl -fsSL "$LDT__DOCKER_DOWNLOAD_URL" | /bin/sh"
+                doUnixRun "sudo adduser $me sudo"
+                doUnixRun "sudo adduser $me docker"
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+        if [ "$sandbox" = "docker-compose" ]; then
+            if [ "$task" = "install" ]; then
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt-get install -y docker-compose"
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+        if [ "$sandbox" = "jdk" ]; then
+            if [ "$task" = "install" ]; then
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt install -y $LDT__JAVA_VERSION"
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+        if [ "$sandbox" = "nodejs" ]; then
+            if [ "$task" = "install" ]; then
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt install ca-certificates curl gnupg"
+                doUnixRun "sudo mkdir -p /etc/apt/keyrings"
+                doUnixRun "curl -fsSL \"${LDT__NODE_DOWNLOAD_URL}\" | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg"
+                doUnixRun "echo \"deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/${LDT__NODE_VERSION}.x nodistro main\" | sudo tee /etc/apt/sources.list.d/nodesource.list"
+                doUnixRun "sudo apt update"
+                doUnixRun "sudo apt install nodejs"
+                doUnixRun "sudo apt autoremove -y"
+                return $statusCode
+            fi
+        fi
+    fi
+}
+
+#################################################################################
+## Do docker exec command with processed arguments
+
+doDockerExec() {
+    log "DEBUG" "docker-executing..."
+    if [ "$dockerContainerCommand" = "" ]; then dockerContainerCommand=$1; fi
+    cmd="docker exec"
+    cmd="$cmd -it"
+    cmd="$cmd $dockerContainerName"
+    cmd="$cmd $dockerContainerUser"
+    cmd="$cmd $dockerContainerCommand"
+    log "DEBUG" "-- cmd='$cmd'"
+    eval "$cmd"
+    statusCode=$?
+    dockerContainerCommand=""
+}
+
+#################################################################################
+## Do docker run command with processed arguments
+
+doDockerRun() {
+    log "DEBUG" "docker-running..."
+    if [ "$dockerContainerCommand" = "" ]; then dockerContainerCommand=$1; fi
+    cmd="docker run"
+    if [ "$DOCKER_DAEMON" = "true" ]; then
+        cmd="$cmd -d"
+    else
+        cmd="$cmd -it"
+        cmd="$cmd --rm"
+    fi
+    cmd="$cmd $dockerContainerName"
+    cmd="$cmd $dockerContainerNetwork"
+    cmd="$cmd $dockerContainerUser"
+    cmd="$cmd $dockerContainerEnv"
+    cmd="$cmd $dockerContainerVolumes"
+    cmd="$cmd $dockerContainerWorkdir"
+    cmd="$cmd $dockerContainerPublish"
+    cmd="$cmd $dockerContainerImage"
+    cmd="$cmd $dockerContainerCommand"
+    log "DEBUG" "-- cmd='$cmd'"
+    eval "$cmd"
+    statusCode=$?
+    dockerContainerCommand=""
+}
+
+#################################################################################
+## Do docker network check by given name
+
+doDockerNetworkCheck() {
+    networkName=$1
+    networkExists=$(docker network ls | grep $networkName)
+
+    if [ "$networkExists" = "" ]; then
+        log "DEBUG" "-- create docker network... '$networkName'"
+        docker network create $networkName
+    fi
+    statusCode=$?
+}
+
+#################################################################################
+## Do docker volume check by given name
+
+doDockerVolumeCheck() {
+    volumeName=$1
+    volumeExists=$(docker volume ls | grep $volumeName)
+
+    if [ "$volumeExists" = "" ]; then
+        log "DEBUG" "-- create docker volume... '$volumeName'"
+        docker volume create $volumeName
+    fi
+    statusCode=$?
+}
+
+#################################################################################
+## Do unix run command with processed arguments
+
+doUnixRun() {
+    log "DEBUG" "unix-running..."
+    if [ "$unixCommand" = "" ]; then unixCommand=$1; fi
+    cmd="eval"
+    cmd="$cmd $unixCommand"
+    log "DEBUG" "-- cmd='$cmd'"
+    eval "$cmd"
+    statusCode=$?
+    unixCommand=""
+}
+
+#################################################################################
+## Entry Point
+
+main $*

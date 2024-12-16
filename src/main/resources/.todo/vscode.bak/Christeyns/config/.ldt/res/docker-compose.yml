@@ -1,0 +1,101 @@
+##################################################
+services:
+##
+  portainer:
+    image: portainer/portainer-ce:$PORTAINER_VERSION
+    container_name: portainer
+    restart: unless-stopped
+    volumes:
+      - /srv/portainer/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - portainer
+    ports:
+      - 127.0.0.1:9000:9000
+##
+  nginx:
+    image: jc21/nginx-proxy-manager:$NGINX_VERSION
+    container_name: nginx-proxy
+    restart: unless-stopped
+    volumes:
+      - /srv/nginx/data:/data
+      - /srv/nginx/letsencrypt:/etc/letsencrypt
+    networks:
+      - nginx
+    ports:
+      - 80:80
+      - 443:443
+      - 127.0.0.1:81:81
+    healthcheck:
+      test: ["CMD", "/bin/check-health"]
+      interval: 10s
+      timeout: 3s
+##
+  postgres:
+    image: postgres:$POSTGRES_VERSION
+    container_name: postgres
+    command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_connections=100
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+    volumes:
+      - /srv/postgres/data:/var/lib/postgresql/data
+    networks:
+      - postgres
+##
+  pgadmin:
+    image: dpage/pgadmin4:$PGADMIN_VERSION
+    container_name: pgadmin
+    restart: unless-stopped
+    user: root
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=$PGADMIN_USER
+      - PGADMIN_DEFAULT_PASSWORD=$PGADMIN_PASSWORD
+    volumes:
+      - /srv/pgadmin/data:/var/lib/pgadmin
+    networks:
+      - postgres
+      - pgadmin
+    ports:
+      - 127.0.0.1:6064:15672
+##
+  rabbitmq:
+    image: rabbitmq:$RABBITMQ_VERSION
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=$RABBITMQ_USER
+      - RABBITMQ_DEFAULT_PASS=$RABBITMQ_PASSWORD
+      - RABBITMQ_DEFAULT_VHOST=$RABBITMQ_VHOST
+    volumes:
+      - /srv/rabbitmq/data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq
+    ports:
+      - 127.0.0.1:6064:15672
+##
+  gitlab-runner:
+    image: gitlab/gitlab-runner:$GITLAB_RUNNER_VERSION
+    container_name: gitlab-runner
+    restart: always
+    volumes:
+      - /srv/gitlab-runner/config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitlab-runner
+
+##################################################
+networks:
+  portainer:
+    name: portainer
+  nginx:
+    name: nginx
+  postgres:
+    name: postgres
+  pgadmin:
+    name: pgadmin
+  rabbitmq:
+    name: rabbitmq
+  gitlab-runner:
+    name: gitlab-runner

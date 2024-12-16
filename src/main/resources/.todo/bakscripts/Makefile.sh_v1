@@ -1,0 +1,70 @@
+#!/bin/sh
+
+main() {
+  if [ ! "$1" = ""  ] && \
+     [ ! "$1" = "daily" ] && \
+     [ ! "$1" = "weekly" ] && \
+     [ ! "$1" = "monthly" ]; then
+    echo "ERROR: invalid backupMode ('$1')!"
+    exit 400
+  fi
+  #####
+  backupMode=$1
+  if [ "$backupMode" = "" ]; then backupMode="custom"; fi
+  backupDate=$(echo $(date +"%Y%m%d-%H%M%S"))
+  backupFolder="/backup/${backupDate}.${backupMode}"
+
+  #####
+# doCommand "mkdir -p ${backupFolder}/home/lild/.ssh/"
+# backupResource=/home/lild/.ssh/id_rsa
+# doBackupFile
+# backupResource=/home/lild/.ssh/id_rsa.pub
+# doBackupFile
+# backupResource=/home/lild/.bash_aliases
+# doBackupFile
+
+  #####
+# doCommand "mkdir -p ${backupFolder}/etc/"
+# backupResource=/etc/fstab
+# doBackupFile
+
+  #####
+# doCommand "mkdir -p ${backupFolder}/srv/"
+# backupResource=/srv/docker-compose.yml
+# doBackupFile
+# doCommand "mkdir -p ${backupFolder}/srv/portainer/"
+# backupResource=/srv/portainer/list
+# doBackupFile
+# doCommand "mkdir -p ${backupFolder}/srv/nginx/"
+# backupResource=/srv/nginx/list
+# doBackupFile
+# doCommand "mkdir -p ${backupFolder}/srv/vscode/config/.ssh/"
+# backupResource=/srv/vscode/list
+# doBackupFile
+# backupResource=/srv/vscode/config/.ssh/id_rsa
+# doBackupFile
+# backupResource=/srv/vscode/config/.ssh/id_rsa.pub
+# doBackupFile
+# backupResource=/srv/vscode/config/.bash_aliases
+# doBackupFile
+}
+
+doBackupFile() {
+  if [ -f "${backupResource}" ]; then
+    doCommand "cp \"${backupResource}\" \"${backupFolder}${backupResource}\""
+  fi
+}
+
+doBackupFolder() {
+  if [ -d "${backupResource}" ]; then
+    doCommand "cp -r \"${backupResource}\" \"${backupFolder}${backupResource}\""
+  fi
+}
+
+doCommand() {
+  cmd=$1
+  echo "-- ${cmd}"
+  eval $cmd
+}
+
+main $1

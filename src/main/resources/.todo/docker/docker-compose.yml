@@ -1,0 +1,89 @@
+networks:
+  portainer:
+    name: portainer
+  nginx:
+    name: nginx
+  vscode:
+    name: vscode
+  pgadmin:
+    name: pgadmin
+  phpmyadmin:
+    name: phpmyadmin
+services:
+  portainer:
+    image: portainer/portainer-ee:2.21.4
+    container_name: portainer
+    restart: unless-stopped
+    volumes:
+      - /srv/portainer/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - portainer
+    ports:
+      - 127.0.0.1:9000:9000
+  nginx:
+    image: jc21/nginx-proxy-manager:2.12.1
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - /srv/nginx/data:/data
+      - /srv/nginx/letsencrypt:/etc/letsencrypt
+    networks:
+      - nginx
+    ports:
+      - 80:80
+      - 443:443
+      - 127.0.0.1:81:81
+  vscode:
+    image: linuxserver/code-server:4.95.1
+    container_name: vscode
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - PASSWORD=
+      - SUDO_PASSWORD=
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /srv/vscode/data:/config
+      - /srv/vscode/srv:/srv
+      - /mnt/work/LDworks:/work/LDworks
+      - /mnt/work/NDworks:/work/NDworks
+      - /mnt/work/Codeolive:/work/Codeolive
+    networks:
+      - vscode
+      - pgadmin
+      - phpmyadmin
+    ports:
+      - 127.0.0.1:8443:8443
+      - 127.0.0.1:15672:15672
+      - 127.0.0.1:3000-3005:3000-3005
+      - 127.0.0.1:3300-3305:3300-3305
+      - 127.0.0.1:4200-4205:4200-4205
+      - 127.0.0.1:9080-9085:9080-9085
+  pgadmin:
+    image: dpage/pgadmin4:8.12.0
+    container_name: pgadmin
+    restart: unless-stopped
+    user: root
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=
+      - PGADMIN_DEFAULT_PASSWORD=
+    volumes:
+      - /srv/pgadmin/data:/var/lib/pgadmin
+    networks:
+      - pgadmin
+    ports:
+      - 127.0.0.1:5050:80
+  phpmyadmin:
+    image: phpmyadmin:5.2.1
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      - PMA_ARBITRARY=1
+    volumes:
+      - /srv/phpmyadmin/data:/etc/phpmyadmin
+    networks:
+      - phpmyadmin
+    ports:
+      - 127.0.0.1:8080:80
