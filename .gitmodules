@@ -16,3 +16,6 @@
 [submodule "ldt-www"]
 	path = projects/ldt-www
 	url = git@github.com:lildworks/ldt-www.git
+[submodule "ldt-unix"]
+	path = lib/ldt-unix
+	url = git@github.com:lildworks/ldt-unix.git
