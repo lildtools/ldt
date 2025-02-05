@@ -1,0 +1,10 @@
+
+  phpmyadmin:
+    image: phpmyadmin:5.2.1
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_ARBITRARY: ${PHPMYADMIN_ARBITARY:-1}
+    network_mode: bridge
+    ports:
+      - 127.0.0.1:8080:80

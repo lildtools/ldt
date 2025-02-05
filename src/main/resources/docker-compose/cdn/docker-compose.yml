@@ -1,0 +1,31 @@
+###########################################################################
+networks:
+  nginx-proxy:
+    name: nginx-proxy
+    external: true
+
+###########################################################################
+services:
+##
+  cdn-daniderdak-cloud:
+    image: httpd:2.4.60-alpine
+    container_name: cdn-daniderdak-cloud
+    restart: unless-stopped
+    volumes:
+      - /srv/cdn/static/dd:/usr/local/apache2/htdocs/:ro
+    networks:
+      - nginx-proxy
+##
+  smtp-daniderdak-cloud:
+    image: nginx:stable
+    container_name: smtp-daniderdak-cloud
+    restart: unless-stopped
+    networks:
+      - nginx-proxy
+##
+  www-daniderdak-cloud:
+    image: nginx:stable
+    container_name: www-daniderdak-cloud
+    restart: unless-stopped
+    networks:
+      - nginx-proxy

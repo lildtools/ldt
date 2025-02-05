@@ -1,0 +1,20 @@
+networks:
+  vscode:
+    name: ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_NETWORK_NAME:-vscode}
+services:
+  vscode:
+    image: ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_IMAGE:-linuxserver/code-server}:${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_IMAGE_TAG:-latest}
+    container_name: ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_CONTAINER_NAME:-vscode}
+    restart: unless-stopped
+    environment:
+      - PASSWORD=${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_PASSWORD}
+      - SUDO_PASSWORD=${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_PASSWORD_SU}
+      - PUID=${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_PUID}
+      - PGID=${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_PGID}
+    volumes:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_VOLME_ROOT:-/srv/vscode}/data:/data
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_VOLME_ROOT:-/srv/vscode}/config:/config
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_VOLME_ROOT:-/srv/vscode}/srv:/srv
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_VOLME_ROOT:-/srv/vscode}/work:/work
+    networks:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__VSCODE_NETWORK_NAME:-vscode}

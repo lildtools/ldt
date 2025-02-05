@@ -1,0 +1,13 @@
+pgadmin:
+    image: dpage/pgadmin4:8.14.0
+    container_name: pgadmin
+    restart: unless-stopped
+    user: root
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_PG_EMAIL:-root@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PG_PASS:-pg4dM1nLw}
+    volumes:
+      - /srv/pgadmin/data:/var/lib/pgadmin
+    network_mode: bridge
+    ports:
+      - 127.0.0.1:5050:80

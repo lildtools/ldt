@@ -1,0 +1,21 @@
+###########################################################################
+## lildworks-devops / docker-compose / nginx-proxy     -== v1.0.0b ==-
+###########################################################################
+networks:
+  nginx-proxy:
+    name: ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_NETWORK_NAME:-nginx-proxy}
+###########################################################################
+services:
+  nginx-proxy:
+    image: ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_IMAGE:-jc21/nginx-proxy-manager}:${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_IMAGE_TAG:-latest}
+    container_name: ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_CONTAINER_NAME:-nginx-proxy}
+    restart: unless-stopped
+    volumes:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_VOLME_ROOT:-/srv/nginx-proxy}/data:/data
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_VOLME_ROOT:-/srv/nginx-proxy}/letsencrypt:/etc/letsencrypt
+    networks:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_NETWORK_NAME:-nginx-proxy}
+    ports:
+      - ${LDT__DEVOPS__DOCKER_COMPOSE__NGINX_PROXY_PORT_PUBLISH:-127.0.0.1:81}:81
+      - 443:443
+      - 80:80

@@ -1,0 +1,78 @@
+###########################################################################
+## lildworks-devops / docker-compose / authentik       -== v1.0.0b ==-
+###########################################################################
+networks:
+  authentik:
+    name: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_NETWORK_NAME:-authentik}
+###########################################################################
+services:
+  authentik-db:
+    image: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_IMAGE:-docker.io/library/postgres}:${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_IMAGE_TAG:-16-alpine}
+    container_name: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_CONTAINER_NAME:-authentik-db}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_USER:-authentik}
+      POSTGRES_PASSWORD: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_PASSWORD:-authentik}
+      POSTGRES_DB: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_DB:-authentik}
+    volumes:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/db/data:/var/lib/postgresql/data
+    networks:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_NETWORK_NAME:-authentik}
+  authentik-redis:
+    image: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_REDIS_IMAGE:-redis}:${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_REDIS_IMAGE_TAG:-alpine}
+    container_name: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_REDIS_CONTAINER_NAME:-authentik-redis}
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/redis/data:/data
+    networks:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_NETWORK_NAME:-authentik}
+  authentik-server:
+    image: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_SERVER_IMAGE:-ghcr.io/goauthentik/server}:${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_SERVER_IMAGE_TAG:-2024.12.2}
+    container_name: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_SERVER_CONTAINER_NAME:-authentik-server}
+    command: server
+    restart: unless-stopped
+    environment:
+      AUTHENTIK_REDIS__HOST: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_REDIS_CONTAINER_NAME:-authentik-redis}
+      AUTHENTIK_POSTGRESQL__HOST: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_CONTAINER_NAME:-authentik-db}
+      AUTHENTIK_POSTGRESQL__USER: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_PASSWORD:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_DB:-authentik}
+    env_file:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/.env
+    volumes:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/server/custom-templates:/templates
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/server/media:/media
+    networks:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_NETWORK_NAME:-authentik}
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__NGINX_PROXY_NETWORK_NAME:-nginx-proxy}
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+  authentik-worker:
+    image: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_WORKER_IMAGE:-ghcr.io/goauthentik/server}:${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_WORKER_IMAGE_TAG:-2024.12.2}
+    container_name: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_WORKER_CONTAINER_NAME:-authentik-worker}
+    command: worker
+    restart: unless-stopped
+    environment:
+      AUTHENTIK_REDIS__HOST: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_REDIS_CONTAINER_NAME:-authentik-redis}
+      AUTHENTIK_POSTGRESQL__HOST: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_CONTAINER_NAME:-authentik-db}
+      AUTHENTIK_POSTGRESQL__USER: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_PASSWORD:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_POSTGRES_DB:-authentik}
+    env_file:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/.env
+    volumes:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/worker/certs:/certs
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/worker/custom-templates:/templates
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_VOLUME_ROOT:-/srv/authentik}/worker/media:/media
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ${LDT__DEVOPS_DOCKER_COMPOSE__AUTHENTIK_NETWORK_NAME:-authentik}
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
